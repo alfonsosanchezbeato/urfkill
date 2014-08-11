@@ -39,13 +39,6 @@ G_BEGIN_DECLS
 #define URF_GET_DEVICE_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS((obj), \
 					URF_TYPE_DEVICE, UrfDeviceClass))
 
-typedef enum {
-	URF_DEVICE_TYPE_UNKNOWN		= -1,
-	URF_DEVICE_TYPE_KERNEL		= 0,
-	URF_DEVICE_TYPE_OFONO		= 1,
-	URF_DEVICE_TYPE_MAX,
-} UrfDeviceType;
-
 typedef struct _UrfDevicePrivate UrfDevicePrivate;
 
 typedef struct {

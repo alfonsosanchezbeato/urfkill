@@ -74,22 +74,6 @@ struct _UrfDeviceOfonoPrivate {
 
 G_DEFINE_TYPE_WITH_PRIVATE (UrfDeviceOfono, urf_device_ofono, URF_TYPE_DEVICE)
 
-
-/**
- * urf_device_ofono_update_states:
- *
- * Return value: #TRUE if the states of the blocks are changed,
- *               otherwise #FALSE
- **/
-gboolean
-urf_device_ofono_update_states (UrfDeviceOfono      *device,
-                               const gboolean  soft,
-                               const gboolean  hard)
-{
-
-	return TRUE;
-}
-
 gchar *
 urf_device_ofono_get_path (UrfDeviceOfono *ofono)
 {
