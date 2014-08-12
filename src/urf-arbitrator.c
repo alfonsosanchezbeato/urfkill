@@ -68,8 +68,10 @@ struct UrfArbitratorPrivate {
 	guint		 watch_id;
 	GList		*devices; /* a GList of UrfDevice */
 	UrfKillswitch	*killswitch[NUM_RFKILL_TYPES];
+#ifdef ENABLE_HYBRIS_DEVICE
 	/* WLAN devices are controlled via libhybris */
 	gboolean	hybris_wlan;
+#endif
 };
 
 G_DEFINE_TYPE(UrfArbitrator, urf_arbitrator, G_TYPE_OBJECT)

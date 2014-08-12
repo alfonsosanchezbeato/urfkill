@@ -60,6 +60,13 @@ AM_PROG_CC_C_O
 AC_ARG_ENABLE(ansi,             [  --enable-ansi           enable -ansi -pedantic gcc flags],enable_ansi=$enableval,enable_ansi=no)
 AC_ARG_ENABLE(verbose-mode,     [  --enable-verbose-mode   support verbose debug mode],enable_verbose_mode=$enableval,enable_verbose_mode=$USE_MAINTAINER_MODE)
 AC_ARG_ENABLE(man-pages,        [  --enable-man-pages      build manual pages],enable_man_pages=$enableval,enable_man_pages=yes)
+AC_ARG_ENABLE(hybris-device,    [  --enable-hybris-device  enable hybris and use Android HAL],enable_hybris_device=$enableval,enable_hybris_device=no)
+
+AM_CONDITIONAL(ENABLE_HYBRIS_DEVICE, test x$enable_hybris_device = xyes)
+if test x$enable_hybris_device = xyes; then
+  AC_DEFINE(ENABLE_HYBRIS_DEVICE, 1, [Define if you want to use the hybris device])
+fi
+
 
 if test "${enable_man_page}" != no; then
 dnl
@@ -259,6 +266,7 @@ echo "        xsltproc:                   ${XSLTPROC}"
 echo ""
 echo "        Maintainer mode:            ${USE_MAINTAINER_MODE}"
 echo "        Session tracking using:     ${with_session_tracking}"
+echo "        Enable hybris device:       ${enable_hybris_device}"
 echo "        Building api docs:          ${enable_gtk_doc}"
 echo "        Building man pages:         ${enable_man_pages}"
 echo "        Building unit tests:        ${enable_tests}"
