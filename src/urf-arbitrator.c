@@ -130,6 +130,28 @@ urf_arbitrator_set_block (UrfArbitrator  *arbitrator,
 	return result;
 }
 
+static gboolean
+urf_arbitrator_set_block_no_persist (UrfArbitrator  *arbitrator,
+				     const gint      type,
+				     const gboolean  block)
+{
+	UrfArbitratorPrivate *priv = arbitrator->priv;
+	gboolean result = FALSE;
+
+	g_return_val_if_fail (type >= 0, FALSE);
+	g_return_val_if_fail (type < NUM_RFKILL_TYPES, FALSE);
+
+	g_message ("Setting %s devices to %s",
+                   type_to_string (type),
+                   block ? "blocked" : "unblocked");
+
+	result = urf_killswitch_set_software_blocked (priv->killswitch[type], block);
+	if (!result)
+		g_warning ("No device with type %u to block", type);
+
+	return result;
+}
+
 /**
  * urf_arbitrator_set_block_idx:
  **/
@@ -167,41 +189,51 @@ urf_arbitrator_set_flight_mode (UrfArbitrator  *arbitrator,
 				const gboolean  block)
 {
 	UrfArbitratorPrivate *priv = arbitrator->priv;
-	KillswitchState state = KILLSWITCH_STATE_NO_ADAPTER;
-	KillswitchState saved_state = KILLSWITCH_STATE_NO_ADAPTER;
-	gboolean want_state = FALSE;
 	gboolean ret = FALSE;
-	int i;
+	gboolean initial_state[NUM_RFKILL_TYPES];
+	gboolean final_state[NUM_RFKILL_TYPES];
+	int i, j;
 
 	g_message("set_flight_mode: %d:", (int) block);
 
-	for (i = RFKILL_TYPE_ALL + 1; i < NUM_RFKILL_TYPES; i++) {
-		state = urf_killswitch_get_state (priv->killswitch[i]);
+	for (i = RFKILL_TYPE_ALL + 1; i < NUM_RFKILL_TYPES; ++i) {
 
-		if (state != KILLSWITCH_STATE_NO_ADAPTER) {
-			g_message("killswitch[%s] state: %s", type_to_string(i),
-				  state_to_string(state));
+		initial_state[i] = urf_config_get_persist_state (priv->config, i);
 
-			saved_state = urf_killswitch_get_saved_state(priv->killswitch[i]);
-			g_debug("saved_state is: %s", state_to_string(saved_state));
-
-			if (block)
-				urf_killswitch_set_saved_state(priv->killswitch[i], state);
-
-			if (!block && state == saved_state)
-				want_state = (gboolean)(saved_state > KILLSWITCH_STATE_UNBLOCKED);
+		if (block) {
+			final_state[i] = TRUE;
+		} else {
+			gboolean prev_soft = urf_config_get_prev_sof (priv->config, i);
+			if (prev_soft && initial_state[i])
+				final_state[i] = TRUE;
 			else
-				want_state = block;
-
-			g_debug ("calling set_block %s %s",
-				 type_to_string(i),
-				 want_state ? "TRUE" : "FALSE");
-
-			ret = urf_arbitrator_set_block (arbitrator, i, want_state);
+				final_state[i] = FALSE;
 		}
+
+		ret = urf_arbitrator_set_block_no_persist (arbitrator, i, final_state[i]);
 
 		if (!ret)
 			break;
+
+	}
+
+	if (ret) {
+		if (block)
+			for (i = RFKILL_TYPE_ALL + 1; i < NUM_RFKILL_TYPES; ++i)
+				urf_config_set_prev_sof	(priv->config, i, initial_state[i]);
+		else
+			for (i = RFKILL_TYPE_ALL + 1; i < NUM_RFKILL_TYPES; ++i)
+				urf_config_set_prev_sof	(priv->config, i, FALSE);
+
+		for (i = RFKILL_TYPE_ALL + 1; i < NUM_RFKILL_TYPES; ++i)
+			urf_config_set_persist_state(priv->config, i,
+							final_state[i] ?
+							KILLSWITCH_STATE_SOFT_BLOCKED :
+							KILLSWITCH_STATE_UNBLOCKED);
+	} else {
+		/* Rollback if unsuccessful */
+		for (j = RFKILL_TYPE_ALL + 1; j <= i; ++j)
+			urf_arbitrator_set_block_no_persist (arbitrator, j, initial_state[j]);
 	}
 
 	return ret;
@@ -643,16 +675,10 @@ urf_arbitrator_startup (UrfArbitrator *arbitrator,
 		urf_arbitrator_add_device (arbitrator, device);
 	}
 
-	/* Set initial flight mode state from persistence */
-	if (priv->persist)
-		urf_arbitrator_set_flight_mode (arbitrator,
-		                                urf_config_get_persist_state (config, RFKILL_TYPE_ALL));
-
-
 	if (priv->persist) {
 		/* Set all the devices that had saved state to what was saved */ 
 		for (i = RFKILL_TYPE_ALL + 1; i < NUM_RFKILL_TYPES; i++) {
-			urf_arbitrator_set_block (arbitrator, i, urf_config_get_persist_state (config, i));
+			urf_arbitrator_set_block_no_persist (arbitrator, i, urf_config_get_persist_state (config, i));
 		}
 	}
 
